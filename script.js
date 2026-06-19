@@ -6,13 +6,12 @@ const tabs = [
 ];
 
 const editableTabs = ["literatura", "musica", "midia"];
-const localStorageKey = "atlas-lusofonia-contribuicoes";
+const localStorageKey = "atlas-lusofonia-dados-editados";
 const urlParams = new URLSearchParams(window.location.search);
 const isLearnerMode = urlParams.get("modo") === "aprendiz" || urlParams.has("aprendiz");
 
 let baseCountries = [];
 let countries = [];
-let learnerContent = {};
 let selectedCountry = null;
 let activeTab = "informacoes";
 let map;
@@ -31,8 +30,7 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   baseCountries = await loadCountries();
-  learnerContent = loadLearnerContent();
-  countries = mergeLearnerContent(baseCountries, learnerContent);
+  countries = loadEditedCountries() || prepareCountries(baseCountries);
   buildMap();
   renderCountryList();
   bindSearch();
@@ -52,38 +50,32 @@ async function loadCountries() {
   }
 }
 
-function loadLearnerContent() {
+function loadEditedCountries() {
   try {
-    return JSON.parse(localStorage.getItem(localStorageKey)) || {};
+    const saved = JSON.parse(localStorage.getItem(localStorageKey));
+    return Array.isArray(saved) ? prepareCountries(saved) : null;
   } catch (error) {
-    return {};
+    return null;
   }
 }
 
-function saveLearnerContent() {
-  localStorage.setItem(localStorageKey, JSON.stringify(learnerContent));
+function saveEditedCountries() {
+  localStorage.setItem(localStorageKey, JSON.stringify(countries));
 }
 
-function mergeLearnerContent(sourceCountries, additions) {
+function prepareCountries(sourceCountries) {
   return sourceCountries.map((country) => {
     const nextCountry = structuredClone(country);
-    editableTabs.forEach((tabKey) => {
-      if (tabKey === "midia") {
-        nextCountry.midia = [
-          ...(nextCountry.midia || []),
-          ...(nextCountry.jornais || []),
-          ...(nextCountry.tv || [])
-        ];
-      }
-      const localItems = additions[country.id]?.[tabKey] || [];
-      nextCountry[tabKey] = [...(nextCountry[tabKey] || []), ...localItems];
-    });
+    nextCountry.midia = [
+      ...(nextCountry.midia || []),
+      ...(nextCountry.jornais || []),
+      ...(nextCountry.tv || [])
+    ];
     return nextCountry;
   });
 }
 
 function refreshDataAfterEdit() {
-  countries = mergeLearnerContent(baseCountries, learnerContent);
   if (selectedCountry) {
     selectedCountry = countries.find((country) => country.id === selectedCountry.id);
     renderDetails();
@@ -224,6 +216,10 @@ function renderDetails() {
     button.addEventListener("click", () => openItemModal(activeTab, Number(button.dataset.openItem)));
   });
 
+  detailsEl.querySelectorAll("[data-edit-item]").forEach((button) => {
+    button.addEventListener("click", () => fillLearnerFormForEdit(Number(button.dataset.editItem)));
+  });
+
   const learnerForm = detailsEl.querySelector("#learnerForm");
   if (learnerForm) {
     learnerForm.addEventListener("submit", handleLearnerSubmit);
@@ -285,14 +281,17 @@ function contentCard(item, index) {
     : `<div class="card-letter" aria-hidden="true">${title.charAt(0)}</div>`;
 
   return `
-    <button class="content-card content-card-button" type="button" data-open-item="${index}">
-      <div class="card-media">${image}</div>
-      <div>
-        <h3>${title}</h3>
-        ${description}
-        <span>Ver detalhes</span>
-      </div>
-    </button>
+    <article class="content-card content-card-entry">
+      <button class="content-card-button" type="button" data-open-item="${index}">
+        <div class="card-media">${image}</div>
+        <div>
+          <h3>${title}</h3>
+          ${description}
+          <span>Ver detalhes</span>
+        </div>
+      </button>
+      ${isLearnerMode ? `<button class="edit-item-button" type="button" data-edit-item="${index}">Editar</button>` : ""}
+    </article>
   `;
 }
 
@@ -307,18 +306,19 @@ function learnerPanel(tabKey) {
       <p>Adicione conteúdo em ${label}. Ele aparece para o público neste navegador e pode ser exportado para atualizar o JSON do site.</p>
 
       <form id="learnerForm" class="learner-form">
+        <input name="editIndex" type="hidden">
         <input name="nome" type="text" placeholder="Nome do escritor, músico, jornal, canal ou projeto" required>
         <textarea name="descricao" rows="2" placeholder="Descrição curta para o cartão" required></textarea>
         <textarea name="texto" rows="4" placeholder="Texto maior para a janela de detalhes"></textarea>
         <input name="imagem" type="url" placeholder="URL da foto ou imagem">
         <input name="link" type="url" placeholder="Link externo">
         <input name="linkTitulo" type="text" placeholder="Título do link">
-        <button type="submit">Adicionar à aba</button>
+        <button id="saveLearnerItem" type="submit">Adicionar à aba</button>
       </form>
 
       <div class="learner-actions">
         <button id="exportJson" type="button">Exportar JSON atualizado</button>
-        <button id="clearLocalData" type="button">Limpar inserções locais</button>
+        <button id="clearLocalData" type="button">Restaurar dados iniciais</button>
       </div>
     </section>
   `;
@@ -330,6 +330,7 @@ function handleLearnerSubmit(event) {
 
   const form = event.currentTarget;
   const formData = new FormData(form);
+  const editIndex = formData.get("editIndex");
   const link = formData.get("link").trim();
   const linkTitle = formData.get("linkTitulo").trim();
 
@@ -351,11 +352,17 @@ function handleLearnerSubmit(event) {
     }
   });
 
-  learnerContent[selectedCountry.id] ??= {};
-  learnerContent[selectedCountry.id][activeTab] ??= [];
-  learnerContent[selectedCountry.id][activeTab].push(newItem);
-  saveLearnerContent();
+  selectedCountry[activeTab] ??= [];
+  if (editIndex !== "") {
+    selectedCountry[activeTab][Number(editIndex)] = newItem;
+  } else {
+    selectedCountry[activeTab].push(newItem);
+  }
+
+  saveEditedCountries();
   form.reset();
+  form.querySelector("[name='editIndex']").value = "";
+  form.querySelector("#saveLearnerItem").textContent = "Adicionar à aba";
   refreshDataAfterEdit();
 }
 
@@ -371,9 +378,29 @@ function exportMergedJson() {
 }
 
 function clearLocalLearnerData() {
-  learnerContent = {};
   localStorage.removeItem(localStorageKey);
+  countries = prepareCountries(baseCountries);
   refreshDataAfterEdit();
+}
+
+function fillLearnerFormForEdit(index) {
+  if (!selectedCountry || !editableTabs.includes(activeTab)) return;
+  const item = selectedCountry[activeTab]?.[index];
+  if (!item) return;
+
+  const form = detailsEl.querySelector("#learnerForm");
+  if (!form) return;
+
+  const links = getItemLinks(item);
+  form.querySelector("[name='editIndex']").value = String(index);
+  form.querySelector("[name='nome']").value = item.nome || item.artista || item.titulo || "";
+  form.querySelector("[name='descricao']").value = item.descricao || "";
+  form.querySelector("[name='texto']").value = item.texto || "";
+  form.querySelector("[name='imagem']").value = item.imagem || "";
+  form.querySelector("[name='link']").value = links[0]?.url || "";
+  form.querySelector("[name='linkTitulo']").value = links[0]?.titulo || "";
+  form.querySelector("#saveLearnerItem").textContent = "Salvar edição";
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function bindModal() {

@@ -72,17 +72,18 @@ https://seu-site.vercel.app?modo=aprendiz
 
 1. Clique em um país no mapa ou na lista lateral.
 2. Escolha uma aba cultural: Literatura, Música ou Mídia.
-3. Use a área "Área do aprendiz".
-4. Preencha:
+3. Para editar um conteúdo existente, clique em "Editar" no cartão.
+4. Para criar um novo conteúdo, use a área "Área do aprendiz".
+5. Preencha:
    - nome;
    - descrição curta;
    - texto maior;
    - URL da foto ou imagem;
    - link externo;
    - título do link.
-5. Clique em "Adicionar à aba".
+6. Clique em "Adicionar à aba" ou "Salvar edição".
 
-O conteúdo novo aparece imediatamente no site, mas fica salvo apenas no navegador usado.
+O conteúdo novo ou editado aparece imediatamente no site, mas fica salvo apenas no navegador usado.
 
 ## Como Salvar As Contribuições
 
@@ -150,7 +151,7 @@ Como o projeto é estático, não precisa de comando de build.
 
 ## Limitações Desta Versão
 
-- As contribuições feitas pela área do aprendiz ficam salvas apenas no navegador.
+- As contribuições e edições feitas pela área do aprendiz ficam salvas apenas no navegador.
 - No modo público, visitantes não alteram o conteúdo oficial do site.
 - Para guardar contribuições de várias pessoas online, será necessário usar um suporte externo no futuro, como Google Sheets, Airtable, Supabase ou Firebase.
 - Ainda não há login, moderação ou painel administrativo.
