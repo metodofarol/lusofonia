@@ -9,6 +9,9 @@ const tabs = [
   { key: "curiosidadesLinguisticas", label: "Curiosidades Linguísticas" }
 ];
 
+const editableTabs = ["literatura", "musica", "cinema", "artes", "jornais", "tv", "curiosidadesLinguisticas"];
+const localStorageKey = "atlas-lusofonia-contribuicoes";
+
 const countryShapes = {
   brasil: [[5.2, -73.9], [4.4, -51.1], [1.0, -43.0], [-8.7, -34.8], [-22.8, -39.0], [-33.7, -53.3], [-22.0, -57.8], [-17.0, -70.0]],
   portugal: [[42.2, -9.5], [41.6, -6.2], [37.0, -6.9], [36.9, -9.4]],
@@ -21,7 +24,9 @@ const countryShapes = {
   "guine-equatorial": [[3.9, 8.4], [3.9, 9.2], [3.1, 9.2], [3.1, 8.4]]
 };
 
+let baseCountries = [];
 let countries = [];
+let learnerContent = {};
 let selectedCountry = null;
 let activeTab = "informacoes";
 let map;
@@ -32,14 +37,20 @@ const detailsEl = document.querySelector("#details");
 const countryListEl = document.querySelector("#countryList");
 const searchInput = document.querySelector("#searchInput");
 const searchResultsEl = document.querySelector("#searchResults");
+const modalEl = document.querySelector("#contentModal");
+const modalBodyEl = document.querySelector("#modalBody");
+const closeModalButton = document.querySelector("#closeModal");
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
-  countries = await loadCountries();
+  baseCountries = await loadCountries();
+  learnerContent = loadLearnerContent();
+  countries = mergeLearnerContent(baseCountries, learnerContent);
   buildMap();
   renderCountryList();
   bindSearch();
+  bindModal();
   document.querySelector("#resetMap").addEventListener("click", fitAllCountries);
 }
 
@@ -52,6 +63,37 @@ async function loadCountries() {
   } catch (error) {
     const fallback = document.querySelector("#fallbackData").textContent;
     return JSON.parse(fallback);
+  }
+}
+
+function loadLearnerContent() {
+  try {
+    return JSON.parse(localStorage.getItem(localStorageKey)) || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveLearnerContent() {
+  localStorage.setItem(localStorageKey, JSON.stringify(learnerContent));
+}
+
+function mergeLearnerContent(sourceCountries, additions) {
+  return sourceCountries.map((country) => {
+    const nextCountry = structuredClone(country);
+    editableTabs.forEach((tabKey) => {
+      const localItems = additions[country.id]?.[tabKey] || [];
+      nextCountry[tabKey] = [...(nextCountry[tabKey] || []), ...localItems];
+    });
+    return nextCountry;
+  });
+}
+
+function refreshDataAfterEdit() {
+  countries = mergeLearnerContent(baseCountries, learnerContent);
+  if (selectedCountry) {
+    selectedCountry = countries.find((country) => country.id === selectedCountry.id);
+    renderDetails();
   }
 }
 
@@ -182,6 +224,25 @@ function renderDetails() {
       renderDetails();
     });
   });
+
+  detailsEl.querySelectorAll("[data-open-item]").forEach((button) => {
+    button.addEventListener("click", () => openItemModal(activeTab, Number(button.dataset.openItem)));
+  });
+
+  const learnerForm = detailsEl.querySelector("#learnerForm");
+  if (learnerForm) {
+    learnerForm.addEventListener("submit", handleLearnerSubmit);
+  }
+
+  const exportButton = detailsEl.querySelector("#exportJson");
+  if (exportButton) {
+    exportButton.addEventListener("click", exportMergedJson);
+  }
+
+  const clearButton = detailsEl.querySelector("#clearLocalData");
+  if (clearButton) {
+    clearButton.addEventListener("click", clearLocalLearnerData);
+  }
 }
 
 function metaCard(label, value) {
@@ -206,36 +267,186 @@ function renderTabContent(country, tabKey) {
 
   if (tabKey === "curiosidadesLinguisticas") {
     return `
-      <div class="content-card">
-        <ul class="curiosity-list">
-          ${country.curiosidadesLinguisticas.map((item) => `<li>${item}</li>`).join("")}
-        </ul>
+      <div class="content-list">
+        ${country.curiosidadesLinguisticas.map((item, index) => contentCard(item, index)).join("")}
       </div>
+      ${learnerPanel(tabKey)}
     `;
   }
 
   const items = country[tabKey] || [];
   return `
     <div class="content-list">
-      ${items.map((item) => contentCard(item)).join("")}
+      ${items.map((item, index) => contentCard(item, index)).join("")}
     </div>
+    ${learnerPanel(tabKey)}
   `;
 }
 
-function contentCard(item) {
+function contentCard(item, index) {
+  if (typeof item === "string") {
+    item = {
+      nome: "Curiosidade linguística",
+      descricao: item,
+      texto: item
+    };
+  }
+
   const title = item.nome || item.artista || item.titulo || "Item cultural";
   const description = item.descricao ? `<p>${item.descricao}</p>` : "";
-  const link = item.link
-    ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer">Abrir referência</a>`
-    : "";
+  const image = item.imagem
+    ? `<img src="${item.imagem}" alt="${title}" loading="lazy">`
+    : `<div class="card-letter" aria-hidden="true">${title.charAt(0)}</div>`;
 
   return `
-    <article class="content-card">
-      <h3>${title}</h3>
-      ${description}
-      ${link}
-    </article>
+    <button class="content-card content-card-button" type="button" data-open-item="${index}">
+      <div class="card-media">${image}</div>
+      <div>
+        <h3>${title}</h3>
+        ${description}
+        <span>Ver detalhes</span>
+      </div>
+    </button>
   `;
+}
+
+function learnerPanel(tabKey) {
+  const isCuriosity = tabKey === "curiosidadesLinguisticas";
+  const label = tabs.find((tab) => tab.key === tabKey)?.label || "aba";
+
+  return `
+    <section class="learner-panel">
+      <h3>Área do aprendiz</h3>
+      <p>Adicione conteúdo em ${label}. Ele aparece para o público neste navegador e pode ser exportado para atualizar o JSON do site.</p>
+
+      <form id="learnerForm" class="learner-form">
+        <input name="nome" type="text" placeholder="${isCuriosity ? "Título da curiosidade" : "Nome do escritor, artista, jornal ou canal"}" required>
+        <textarea name="descricao" rows="2" placeholder="Descrição curta para o cartão" ${isCuriosity ? "" : "required"}></textarea>
+        <textarea name="texto" rows="4" placeholder="Texto maior para a janela de detalhes"></textarea>
+        <input name="imagem" type="url" placeholder="URL da foto ou imagem">
+        <input name="link" type="url" placeholder="Link externo">
+        <input name="linkTitulo" type="text" placeholder="Título do link">
+        <button type="submit">Adicionar à aba</button>
+      </form>
+
+      <div class="learner-actions">
+        <button id="exportJson" type="button">Exportar JSON atualizado</button>
+        <button id="clearLocalData" type="button">Limpar inserções locais</button>
+      </div>
+    </section>
+  `;
+}
+
+function handleLearnerSubmit(event) {
+  event.preventDefault();
+  if (!selectedCountry || !editableTabs.includes(activeTab)) return;
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+  const link = formData.get("link").trim();
+  const linkTitle = formData.get("linkTitulo").trim();
+
+  const newItem = {
+    nome: formData.get("nome").trim(),
+    descricao: formData.get("descricao").trim(),
+    texto: formData.get("texto").trim(),
+    imagem: formData.get("imagem").trim(),
+    link
+  };
+
+  if (link) {
+    newItem.links = [{ titulo: linkTitle || "Referência externa", url: link }];
+  }
+
+  Object.keys(newItem).forEach((key) => {
+    if (!newItem[key] || (Array.isArray(newItem[key]) && !newItem[key].length)) {
+      delete newItem[key];
+    }
+  });
+
+  learnerContent[selectedCountry.id] ??= {};
+  learnerContent[selectedCountry.id][activeTab] ??= [];
+  learnerContent[selectedCountry.id][activeTab].push(newItem);
+  saveLearnerContent();
+  form.reset();
+  refreshDataAfterEdit();
+}
+
+function exportMergedJson() {
+  const json = JSON.stringify(countries, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "paises-atualizado.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearLocalLearnerData() {
+  learnerContent = {};
+  localStorage.removeItem(localStorageKey);
+  refreshDataAfterEdit();
+}
+
+function bindModal() {
+  closeModalButton.addEventListener("click", closeModal);
+  modalEl.addEventListener("click", (event) => {
+    if (event.target === modalEl) closeModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modalEl.hidden) closeModal();
+  });
+}
+
+function openItemModal(tabKey, index) {
+  if (!selectedCountry) return;
+  let item = selectedCountry[tabKey]?.[index];
+  if (!item) return;
+  if (typeof item === "string") {
+    item = {
+      nome: "Curiosidade linguística",
+      descricao: item,
+      texto: item
+    };
+  }
+
+  const title = item.nome || item.artista || item.titulo || "Item cultural";
+  const text = item.texto || item.descricao || "Conteúdo em construção.";
+  const links = getItemLinks(item);
+
+  modalBodyEl.innerHTML = `
+    ${item.imagem ? `<img class="modal-image" src="${item.imagem}" alt="${title}">` : ""}
+    <p class="modal-kicker">${selectedCountry.bandeira} ${selectedCountry.nome} · ${tabs.find((tab) => tab.key === tabKey)?.label}</p>
+    <h2 id="modalTitle">${title}</h2>
+    <p>${text}</p>
+    ${links.length ? `
+      <div class="modal-links">
+        ${links.map((link) => `<a href="${link.url}" target="_blank" rel="noopener noreferrer">${link.titulo}</a>`).join("")}
+      </div>
+    ` : ""}
+  `;
+
+  modalEl.hidden = false;
+  closeModalButton.focus();
+}
+
+function closeModal() {
+  modalEl.hidden = true;
+  modalBodyEl.innerHTML = "";
+}
+
+function getItemLinks(item) {
+  const links = [];
+  if (item.link) {
+    links.push({ titulo: "Abrir referência", url: item.link });
+  }
+  if (Array.isArray(item.links)) {
+    item.links.forEach((link) => {
+      if (link.url) links.push({ titulo: link.titulo || "Abrir link", url: link.url });
+    });
+  }
+  return links;
 }
 
 function bindSearch() {
@@ -252,13 +463,19 @@ function bindSearch() {
         { label: "País", items: [{ nome: country.nome, descricao: country.capital }] },
         { label: "Literatura", items: country.literatura },
         { label: "Música", items: country.musica },
-        { label: "Jornais", items: country.jornais }
+        { label: "Cinema", items: country.cinema },
+        { label: "Artes", items: country.artes },
+        { label: "Jornais", items: country.jornais },
+        { label: "TV / YouTube", items: country.tv },
+        { label: "Curiosidades", items: country.curiosidadesLinguisticas }
       ];
 
       searchableGroups.forEach((group) => {
         group.items.forEach((item) => {
-          const title = item.nome || item.artista || "";
-          const haystack = normalize(`${country.nome} ${title} ${item.descricao || ""}`);
+          const title = typeof item === "string" ? item : item.nome || item.artista || "";
+          const description = typeof item === "string" ? item : item.descricao || "";
+          const text = typeof item === "string" ? item : item.texto || "";
+          const haystack = normalize(`${country.nome} ${title} ${description} ${text}`);
           if (haystack.includes(term)) {
             results.push({ country, group: group.label, title });
           }
