@@ -2,27 +2,13 @@ const tabs = [
   { key: "informacoes", label: "Informações" },
   { key: "literatura", label: "Literatura" },
   { key: "musica", label: "Música" },
-  { key: "cinema", label: "Cinema" },
-  { key: "artes", label: "Artes" },
-  { key: "jornais", label: "Jornais" },
-  { key: "tv", label: "TV / YouTube" },
-  { key: "curiosidadesLinguisticas", label: "Curiosidades Linguísticas" }
+  { key: "midia", label: "Mídia" }
 ];
 
-const editableTabs = ["literatura", "musica", "cinema", "artes", "jornais", "tv", "curiosidadesLinguisticas"];
+const editableTabs = ["literatura", "musica", "midia"];
 const localStorageKey = "atlas-lusofonia-contribuicoes";
-
-const countryShapes = {
-  brasil: [[5.2, -73.9], [4.4, -51.1], [1.0, -43.0], [-8.7, -34.8], [-22.8, -39.0], [-33.7, -53.3], [-22.0, -57.8], [-17.0, -70.0]],
-  portugal: [[42.2, -9.5], [41.6, -6.2], [37.0, -6.9], [36.9, -9.4]],
-  angola: [[-5.0, 11.7], [-6.0, 24.0], [-17.2, 23.9], [-18.0, 12.1], [-8.7, 12.0]],
-  mocambique: [[-10.5, 40.6], [-15.0, 39.2], [-18.8, 35.0], [-26.8, 32.8], [-24.4, 35.6], [-16.5, 39.0]],
-  "cabo-verde": [[17.4, -25.4], [17.0, -22.5], [14.2, -22.5], [14.5, -25.5]],
-  "guine-bissau": [[12.7, -16.8], [12.7, -13.6], [10.8, -13.7], [10.6, -16.6]],
-  "sao-tome-principe": [[1.9, 6.1], [1.9, 7.7], [-0.2, 7.7], [-0.2, 6.1]],
-  "timor-leste": [[-8.1, 124.0], [-8.1, 127.4], [-9.7, 127.4], [-9.7, 124.0]],
-  "guine-equatorial": [[3.9, 8.4], [3.9, 9.2], [3.1, 9.2], [3.1, 8.4]]
-};
+const urlParams = new URLSearchParams(window.location.search);
+const isLearnerMode = urlParams.get("modo") === "aprendiz" || urlParams.has("aprendiz");
 
 let baseCountries = [];
 let countries = [];
@@ -31,7 +17,7 @@ let selectedCountry = null;
 let activeTab = "informacoes";
 let map;
 const markers = new Map();
-const polygons = new Map();
+const highlightCircles = new Map();
 
 const detailsEl = document.querySelector("#details");
 const countryListEl = document.querySelector("#countryList");
@@ -82,6 +68,13 @@ function mergeLearnerContent(sourceCountries, additions) {
   return sourceCountries.map((country) => {
     const nextCountry = structuredClone(country);
     editableTabs.forEach((tabKey) => {
+      if (tabKey === "midia") {
+        nextCountry.midia = [
+          ...(nextCountry.midia || []),
+          ...(nextCountry.jornais || []),
+          ...(nextCountry.tv || [])
+        ];
+      }
       const localItems = additions[country.id]?.[tabKey] || [];
       nextCountry[tabKey] = [...(nextCountry[tabKey] || []), ...localItems];
     });
@@ -111,11 +104,12 @@ function buildMap() {
   }).addTo(map);
 
   countries.forEach((country) => {
-    const polygon = L.polygon(countryShapes[country.id], {
+    const circle = L.circleMarker(country.coordenadasCapital, {
       color: "#0f766e",
-      weight: 1.8,
+      weight: 2,
       fillColor: "#0f766e",
-      fillOpacity: 0.22
+      fillOpacity: 0.2,
+      radius: 18
     })
       .addTo(map)
       .bindPopup(`<strong>${country.bandeira} ${country.nome}</strong><br>${country.capital}`)
@@ -134,7 +128,7 @@ function buildMap() {
       .bindPopup(`<strong>${country.capital}</strong><br>${country.nome}`)
       .on("click", () => selectCountry(country.id));
 
-    polygons.set(country.id, polygon);
+    highlightCircles.set(country.id, circle);
     markers.set(country.id, marker);
   });
 
@@ -142,7 +136,7 @@ function buildMap() {
 }
 
 function fitAllCountries() {
-  const group = L.featureGroup([...polygons.values(), ...markers.values()]);
+  const group = L.featureGroup([...highlightCircles.values(), ...markers.values()]);
   map.fitBounds(group.getBounds().pad(0.25));
 }
 
@@ -177,14 +171,15 @@ function selectCountry(countryId) {
 }
 
 function updateActiveMapLayer() {
-  polygons.forEach((polygon, id) => {
+  highlightCircles.forEach((circle, id) => {
     const isActive = selectedCountry && selectedCountry.id === id;
-    polygon.setStyle({
-      fillOpacity: isActive ? 0.45 : 0.22,
-      weight: isActive ? 3 : 1.8,
+    circle.setStyle({
+      fillOpacity: isActive ? 0.36 : 0.2,
+      weight: isActive ? 3 : 2,
       color: isActive ? "#bf7d24" : "#0f766e",
       fillColor: isActive ? "#bf7d24" : "#0f766e"
     });
+    circle.setRadius(isActive ? 24 : 18);
   });
 }
 
@@ -265,15 +260,6 @@ function renderTabContent(country, tabKey) {
     `;
   }
 
-  if (tabKey === "curiosidadesLinguisticas") {
-    return `
-      <div class="content-list">
-        ${country.curiosidadesLinguisticas.map((item, index) => contentCard(item, index)).join("")}
-      </div>
-      ${learnerPanel(tabKey)}
-    `;
-  }
-
   const items = country[tabKey] || [];
   return `
     <div class="content-list">
@@ -311,7 +297,8 @@ function contentCard(item, index) {
 }
 
 function learnerPanel(tabKey) {
-  const isCuriosity = tabKey === "curiosidadesLinguisticas";
+  if (!isLearnerMode) return "";
+
   const label = tabs.find((tab) => tab.key === tabKey)?.label || "aba";
 
   return `
@@ -320,8 +307,8 @@ function learnerPanel(tabKey) {
       <p>Adicione conteúdo em ${label}. Ele aparece para o público neste navegador e pode ser exportado para atualizar o JSON do site.</p>
 
       <form id="learnerForm" class="learner-form">
-        <input name="nome" type="text" placeholder="${isCuriosity ? "Título da curiosidade" : "Nome do escritor, artista, jornal ou canal"}" required>
-        <textarea name="descricao" rows="2" placeholder="Descrição curta para o cartão" ${isCuriosity ? "" : "required"}></textarea>
+        <input name="nome" type="text" placeholder="Nome do escritor, músico, jornal, canal ou projeto" required>
+        <textarea name="descricao" rows="2" placeholder="Descrição curta para o cartão" required></textarea>
         <textarea name="texto" rows="4" placeholder="Texto maior para a janela de detalhes"></textarea>
         <input name="imagem" type="url" placeholder="URL da foto ou imagem">
         <input name="link" type="url" placeholder="Link externo">
@@ -463,11 +450,7 @@ function bindSearch() {
         { label: "País", items: [{ nome: country.nome, descricao: country.capital }] },
         { label: "Literatura", items: country.literatura },
         { label: "Música", items: country.musica },
-        { label: "Cinema", items: country.cinema },
-        { label: "Artes", items: country.artes },
-        { label: "Jornais", items: country.jornais },
-        { label: "TV / YouTube", items: country.tv },
-        { label: "Curiosidades", items: country.curiosidadesLinguisticas }
+        { label: "Mídia", items: country.midia || [] }
       ];
 
       searchableGroups.forEach((group) => {

@@ -37,7 +37,7 @@ textarea {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(330px, 420px) 1fr;
+  grid-template-columns: minmax(430px, 560px) 1fr;
   min-height: 100vh;
 }
 

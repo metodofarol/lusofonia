@@ -14,13 +14,9 @@ O projeto usa HTML, CSS, JavaScript puro, Leaflet.js e dados em JSON. Não usa b
   - Informações
   - Literatura
   - Música
-  - Cinema
-  - Artes
-  - Jornais
-  - TV / YouTube
-  - Curiosidades Linguísticas
+  - Mídia
 - Permite que o público clique em cartões culturais para abrir uma janela com mais detalhes.
-- Permite que o aprendiz adicione novos conteúdos nas abas e exporte um JSON atualizado.
+- Permite que o aprendiz adicione novos conteúdos nas abas e exporte um JSON atualizado no modo de aprendizagem.
 
 ## Estrutura
 
@@ -50,10 +46,32 @@ Depois abra:
 http://localhost:8000
 ```
 
+## Modo Público E Modo Aprendiz
+
+No endereço público normal, a área do aprendiz não aparece. O visitante vê apenas o mapa, as abas e os cartões clicáveis.
+
+Para abrir a versão de aprendizagem, acrescente isto ao final do endereço:
+
+```text
+?modo=aprendiz
+```
+
+Exemplo local:
+
+```text
+http://localhost:8000?modo=aprendiz
+```
+
+Exemplo na Vercel:
+
+```text
+https://seu-site.vercel.app?modo=aprendiz
+```
+
 ## Como Usar Como Aprendiz
 
 1. Clique em um país no mapa ou na lista lateral.
-2. Escolha uma aba cultural, como Literatura, Música ou Artes.
+2. Escolha uma aba cultural: Literatura, Música ou Mídia.
 3. Use a área "Área do aprendiz".
 4. Preencha:
    - nome;
@@ -133,6 +151,7 @@ Como o projeto é estático, não precisa de comando de build.
 ## Limitações Desta Versão
 
 - As contribuições feitas pela área do aprendiz ficam salvas apenas no navegador.
+- No modo público, visitantes não alteram o conteúdo oficial do site.
 - Para guardar contribuições de várias pessoas online, será necessário usar um suporte externo no futuro, como Google Sheets, Airtable, Supabase ou Firebase.
 - Ainda não há login, moderação ou painel administrativo.
 
