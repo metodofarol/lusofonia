@@ -77,13 +77,15 @@ https://seu-site.vercel.app?modo=aprendiz
 5. Preencha:
    - nome;
    - descrição curta;
-   - texto maior;
+   - texto maior no editor visual;
    - URL da foto ou imagem;
    - link externo;
    - título do link.
 6. Clique em "Adicionar à aba" ou "Salvar edição".
 
 O conteúdo novo ou editado aparece imediatamente no site, mas fica salvo apenas no navegador usado.
+
+O editor visual permite formatar texto, alinhar trechos, inserir hiperlinks, inserir imagem por URL e colar imagens diretamente. Ao clicar em uma imagem dentro do editor, é possível ajustar a largura em porcentagem.
 
 ## Como Salvar As Contribuições
 

@@ -404,7 +404,60 @@ h2 {
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
 }
 
-.learner-form button,
+.editor-shell {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(15, 118, 110, 0.08);
+  border-bottom: 1px solid var(--line);
+}
+
+.editor-toolbar button {
+  padding: 7px 9px;
+  color: var(--accent-dark);
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.rich-editor {
+  min-height: 180px;
+  padding: 14px;
+  color: var(--ink);
+  line-height: 1.6;
+  outline: none;
+}
+
+.rich-editor:empty::before {
+  color: var(--muted);
+  content: attr(data-placeholder);
+}
+
+.rich-editor img,
+.modal-rich-text img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.rich-editor a,
+.modal-rich-text a {
+  color: var(--rose);
+  font-weight: 800;
+}
+
+#saveLearnerItem,
 .learner-actions button {
   padding: 10px 12px;
   color: white;
@@ -565,6 +618,15 @@ h2 {
 .modal-card p {
   color: #405156;
   line-height: 1.62;
+}
+
+.modal-rich-text {
+  color: #405156;
+  line-height: 1.62;
+}
+
+.modal-rich-text p {
+  margin-bottom: 1em;
 }
 
 .modal-links {

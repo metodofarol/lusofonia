@@ -223,6 +223,7 @@ function renderDetails() {
   const learnerForm = detailsEl.querySelector("#learnerForm");
   if (learnerForm) {
     learnerForm.addEventListener("submit", handleLearnerSubmit);
+    bindRichEditor(learnerForm);
   }
 
   const exportButton = detailsEl.querySelector("#exportJson");
@@ -309,7 +310,19 @@ function learnerPanel(tabKey) {
         <input name="editIndex" type="hidden">
         <input name="nome" type="text" placeholder="Nome do escritor, músico, jornal, canal ou projeto" required>
         <textarea name="descricao" rows="2" placeholder="Descrição curta para o cartão" required></textarea>
-        <textarea name="texto" rows="4" placeholder="Texto maior para a janela de detalhes"></textarea>
+        <input name="textoHtml" type="hidden">
+        <div class="editor-shell">
+          <div class="editor-toolbar" aria-label="Ferramentas do texto">
+            <button type="button" data-command="bold">B</button>
+            <button type="button" data-command="italic">I</button>
+            <button type="button" data-command="justifyLeft">Esq.</button>
+            <button type="button" data-command="justifyCenter">Centro</button>
+            <button type="button" data-command="justifyRight">Dir.</button>
+            <button type="button" data-action="link">Link</button>
+            <button type="button" data-action="image">Imagem</button>
+          </div>
+          <div id="richEditor" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Texto maior para a janela de detalhes. Você pode colar imagens, formatar texto e inserir hiperlinks."></div>
+        </div>
         <input name="imagem" type="url" placeholder="URL da foto ou imagem">
         <input name="link" type="url" placeholder="Link externo">
         <input name="linkTitulo" type="text" placeholder="Título do link">
@@ -329,6 +342,8 @@ function handleLearnerSubmit(event) {
   if (!selectedCountry || !editableTabs.includes(activeTab)) return;
 
   const form = event.currentTarget;
+  const editor = form.querySelector("#richEditor");
+  form.querySelector("[name='textoHtml']").value = editor.innerHTML.trim();
   const formData = new FormData(form);
   const editIndex = formData.get("editIndex");
   const link = formData.get("link").trim();
@@ -337,14 +352,11 @@ function handleLearnerSubmit(event) {
   const newItem = {
     nome: formData.get("nome").trim(),
     descricao: formData.get("descricao").trim(),
-    texto: formData.get("texto").trim(),
+    textoHtml: formData.get("textoHtml").trim(),
     imagem: formData.get("imagem").trim(),
-    link
+    link,
+    linkTitulo: linkTitle
   };
-
-  if (link) {
-    newItem.links = [{ titulo: linkTitle || "Referência externa", url: link }];
-  }
 
   Object.keys(newItem).forEach((key) => {
     if (!newItem[key] || (Array.isArray(newItem[key]) && !newItem[key].length)) {
@@ -361,6 +373,7 @@ function handleLearnerSubmit(event) {
 
   saveEditedCountries();
   form.reset();
+  editor.innerHTML = "";
   form.querySelector("[name='editIndex']").value = "";
   form.querySelector("#saveLearnerItem").textContent = "Adicionar à aba";
   refreshDataAfterEdit();
@@ -395,7 +408,7 @@ function fillLearnerFormForEdit(index) {
   form.querySelector("[name='editIndex']").value = String(index);
   form.querySelector("[name='nome']").value = item.nome || item.artista || item.titulo || "";
   form.querySelector("[name='descricao']").value = item.descricao || "";
-  form.querySelector("[name='texto']").value = item.texto || "";
+  form.querySelector("#richEditor").innerHTML = item.textoHtml || item.texto || "";
   form.querySelector("[name='imagem']").value = item.imagem || "";
   form.querySelector("[name='link']").value = links[0]?.url || "";
   form.querySelector("[name='linkTitulo']").value = links[0]?.titulo || "";
@@ -426,14 +439,16 @@ function openItemModal(tabKey, index) {
   }
 
   const title = item.nome || item.artista || item.titulo || "Item cultural";
-  const text = item.texto || item.descricao || "Conteúdo em construção.";
+  const content = item.textoHtml
+    ? `<div class="modal-rich-text">${item.textoHtml}</div>`
+    : `<p>${item.texto || item.descricao || "Conteúdo em construção."}</p>`;
   const links = getItemLinks(item);
 
   modalBodyEl.innerHTML = `
     ${item.imagem ? `<img class="modal-image" src="${item.imagem}" alt="${title}">` : ""}
     <p class="modal-kicker">${selectedCountry.bandeira} ${selectedCountry.nome} · ${tabs.find((tab) => tab.key === tabKey)?.label}</p>
     <h2 id="modalTitle">${title}</h2>
-    <p>${text}</p>
+    ${content}
     ${links.length ? `
       <div class="modal-links">
         ${links.map((link) => `<a href="${link.url}" target="_blank" rel="noopener noreferrer">${link.titulo}</a>`).join("")}
@@ -452,15 +467,67 @@ function closeModal() {
 
 function getItemLinks(item) {
   const links = [];
+  const seen = new Set();
   if (item.link) {
-    links.push({ titulo: "Abrir referência", url: item.link });
+    links.push({ titulo: item.linkTitulo || "Fonte externa", url: item.link });
+    seen.add(item.link);
   }
   if (Array.isArray(item.links)) {
     item.links.forEach((link) => {
-      if (link.url) links.push({ titulo: link.titulo || "Abrir link", url: link.url });
+      if (link.url && !seen.has(link.url)) {
+        links.push({ titulo: link.titulo || "Link externo", url: link.url });
+        seen.add(link.url);
+      }
     });
   }
   return links;
+}
+
+function bindRichEditor(form) {
+  const editor = form.querySelector("#richEditor");
+  const toolbar = form.querySelector(".editor-toolbar");
+  if (!editor || !toolbar) return;
+
+  toolbar.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+
+    editor.focus();
+
+    if (button.dataset.command) {
+      document.execCommand(button.dataset.command, false, null);
+    }
+
+    if (button.dataset.action === "link") {
+      const url = prompt("Cole o endereço do link");
+      if (url) document.execCommand("createLink", false, url);
+    }
+
+    if (button.dataset.action === "image") {
+      const url = prompt("Cole a URL da imagem");
+      if (url) document.execCommand("insertImage", false, url);
+    }
+  });
+
+  editor.addEventListener("paste", (event) => {
+    const imageFile = [...event.clipboardData.files].find((file) => file.type.startsWith("image/"));
+    if (!imageFile) return;
+
+    event.preventDefault();
+    const reader = new FileReader();
+    reader.onload = () => document.execCommand("insertImage", false, reader.result);
+    reader.readAsDataURL(imageFile);
+  });
+
+  editor.addEventListener("click", (event) => {
+    if (event.target.tagName !== "IMG") return;
+    const width = prompt("Largura da imagem em %, por exemplo 50 ou 100", "100");
+    const parsedWidth = Number(width);
+    if (parsedWidth) {
+      event.target.style.width = `${Math.max(10, Math.min(100, parsedWidth))}%`;
+      event.target.style.height = "auto";
+    }
+  });
 }
 
 function bindSearch() {
