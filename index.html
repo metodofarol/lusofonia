@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas Cultural da Lusofonia</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar" aria-label="Painel cultural">
+      <header class="brand">
+        <p class="eyebrow">Cartografias da língua portuguesa</p>
+        <h1>Atlas Cultural da Lusofonia</h1>
+      </header>
+
+      <section class="search-panel" aria-label="Busca">
+        <label for="searchInput">Buscar país, escritor, músico ou jornal</label>
+        <input id="searchInput" type="search" placeholder="Ex.: Mia Couto, Brasil, Público">
+        <div id="searchResults" class="search-results" aria-live="polite"></div>
+      </section>
+
+      <nav class="country-list" aria-label="Países lusófonos">
+        <h2>Países</h2>
+        <div id="countryList"></div>
+      </nav>
+
+      <section id="details" class="details-panel" aria-live="polite">
+        <p class="intro-text">
+          Clique em um país lusófono no mapa para explorar escritores, músicas, cinema, artes, jornais, televisões e curiosidades linguísticas.
+        </p>
+      </section>
+    </aside>
+
+    <section class="map-area" aria-label="Mapa-múndi interativo">
+      <div class="map-toolbar">
+        <span>Mapa cultural interativo</span>
+        <button id="resetMap" type="button">Ver todos</button>
+      </div>
+      <div id="map"></div>
+    </section>
+  </main>
+
+  <!-- Cópia de segurança para o site funcionar ao abrir index.html diretamente no navegador. -->
+  <script id="fallbackData" type="application/json">
+[
+  {
+    "id": "brasil",
+    "nome": "Brasil",
+    "bandeira": "🇧🇷",
+    "capital": "Brasília",
+    "continente": "América do Sul",
+    "lingua": "Português",
+    "moeda": "Real brasileiro",
+    "coordenadasCapital": [-15.7939, -47.8828],
+    "resumo": "O Brasil reúne matrizes indígenas, africanas, europeias e asiáticas em uma produção cultural marcada por literatura diversa, música popular urbana, cinema autoral e intensa imprensa regional.",
+    "literatura": [
+      {
+        "nome": "Machado de Assis",
+        "descricao": "Romancista e contista central da literatura brasileira, fundador da Academia Brasileira de Letras.",
+        "link": "https://www.academia.org.br/academicos/machado-de-assis/biografia"
+      },
+      {
+        "nome": "Clarice Lispector",
+        "descricao": "Autora de prosa introspectiva e experimental, com forte presença no cânone moderno.",
+        "link": "https://enciclopedia.itaucultural.org.br/pessoa1346/clarice-lispector"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Gilberto Gil",
+        "descricao": "Compositor e intérprete associado à Tropicália e à canção popular brasileira.",
+        "link": "https://www.youtube.com/results?search_query=Gilberto+Gil"
+      },
+      {
+        "nome": "Elis Regina",
+        "descricao": "Cantora de interpretação marcante na MPB e na televisão brasileira.",
+        "link": "https://www.youtube.com/results?search_query=Elis+Regina"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Cinema Novo",
+        "descricao": "Movimento que renovou a linguagem do cinema brasileiro a partir dos anos 1960.",
+        "link": "https://enciclopedia.itaucultural.org.br/termo14342/cinema-novo"
+      },
+      {
+        "nome": "Central do Brasil",
+        "descricao": "Filme de Walter Salles reconhecido internacionalmente.",
+        "link": "https://www.imdb.com/title/tt0140888/"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Tarsila do Amaral",
+        "descricao": "Pintora modernista ligada à Antropofagia e à renovação visual brasileira.",
+        "link": "https://enciclopedia.itaucultural.org.br/pessoa824/tarsila-do-amaral"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Folha de S.Paulo",
+        "link": "https://www.folha.uol.com.br/"
+      },
+      {
+        "nome": "O Globo",
+        "link": "https://oglobo.globo.com/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "TV Brasil",
+        "link": "https://tvbrasil.ebc.com.br/"
+      },
+      {
+        "nome": "Canal Curta!",
+        "link": "https://www.youtube.com/results?search_query=Canal+Curta"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O português brasileiro incorporou muitas palavras de origem tupi, como pipoca, abacaxi e capim.",
+      "Há grande diversidade de sotaques regionais, do Norte ao Sul do país."
+    ]
+  },
+  {
+    "id": "portugal",
+    "nome": "Portugal",
+    "bandeira": "🇵🇹",
+    "capital": "Lisboa",
+    "continente": "Europa",
+    "lingua": "Português",
+    "moeda": "Euro",
+    "coordenadasCapital": [38.7223, -9.1393],
+    "resumo": "Portugal é uma referência histórica da língua portuguesa, com forte tradição literária, fado, cinema contemporâneo e instituições culturais de circulação internacional.",
+    "literatura": [
+      {
+        "nome": "Fernando Pessoa",
+        "descricao": "Poeta modernista conhecido por seus heterônimos e pela reinvenção da voz poética.",
+        "link": "https://www.casafernandopessoa.pt/"
+      },
+      {
+        "nome": "José Saramago",
+        "descricao": "Romancista português vencedor do Nobel de Literatura.",
+        "link": "https://www.josesaramago.org/"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Amália Rodrigues",
+        "descricao": "Uma das vozes mais importantes da história do fado.",
+        "link": "https://www.youtube.com/results?search_query=Am%C3%A1lia+Rodrigues"
+      },
+      {
+        "nome": "Mariza",
+        "descricao": "Cantora que projetou o fado em palcos internacionais contemporâneos.",
+        "link": "https://www.youtube.com/results?search_query=Mariza+fado"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Manoel de Oliveira",
+        "descricao": "Cineasta português de obra extensa e reconhecida na Europa.",
+        "link": "https://www.imdb.com/name/nm0210701/"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Paula Rego",
+        "descricao": "Artista visual portuguesa com obra narrativa, política e expressiva.",
+        "link": "https://www.casadasistoriespaularego.com/"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Público",
+        "link": "https://www.publico.pt/"
+      },
+      {
+        "nome": "Diário de Notícias",
+        "link": "https://www.dn.pt/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "RTP",
+        "link": "https://www.rtp.pt/"
+      },
+      {
+        "nome": "RTP Arquivos",
+        "link": "https://arquivos.rtp.pt/"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O português europeu preserva usos pronominais e fonéticos distintos do português brasileiro.",
+      "O mirandês também é língua oficial local em parte do nordeste de Portugal."
+    ]
+  },
+  {
+    "id": "angola",
+    "nome": "Angola",
+    "bandeira": "🇦🇴",
+    "capital": "Luanda",
+    "continente": "África",
+    "lingua": "Português",
+    "moeda": "Kwanza",
+    "coordenadasCapital": [-8.839, 13.2894],
+    "resumo": "Angola combina oralidades bantu, literatura urbana, semba, kizomba, kuduro e artes visuais que dialogam com memória, cidade e pós-independência.",
+    "literatura": [
+      {
+        "nome": "Pepetela",
+        "descricao": "Romancista angolano cuja obra cruza história, política e identidade nacional.",
+        "link": "https://www.youtube.com/results?search_query=Pepetela+literatura"
+      },
+      {
+        "nome": "Ondjaki",
+        "descricao": "Escritor contemporâneo conhecido por narrativas de infância, memória e Luanda.",
+        "link": "https://www.youtube.com/results?search_query=Ondjaki"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Bonga",
+        "descricao": "Cantor ligado ao semba e à música angolana de circulação mundial.",
+        "link": "https://www.youtube.com/results?search_query=Bonga+Angola"
+      },
+      {
+        "nome": "Paulo Flores",
+        "descricao": "Compositor que atualiza tradições angolanas em diálogo com a canção urbana.",
+        "link": "https://www.youtube.com/results?search_query=Paulo+Flores"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "O Herói",
+        "descricao": "Filme de Zezé Gamboa sobre reconstrução social no pós-guerra.",
+        "link": "https://www.imdb.com/title/tt0445868/"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "António Ole",
+        "descricao": "Artista visual angolano com obras sobre espaço urbano e memória coletiva.",
+        "link": "https://www.youtube.com/results?search_query=Ant%C3%B3nio+Ole"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Jornal de Angola",
+        "link": "https://www.jornaldeangola.ao/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "TPA",
+        "link": "https://www.tpa.ao/"
+      },
+      {
+        "nome": "Platinaline",
+        "link": "https://www.youtube.com/results?search_query=Platinaline+Angola"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O português angolano convive com línguas como kimbundu, umbundu e kikongo.",
+      "Termos como kota e bué circulam em registros urbanos e juvenis."
+    ]
+  },
+  {
+    "id": "mocambique",
+    "nome": "Moçambique",
+    "bandeira": "🇲🇿",
+    "capital": "Maputo",
+    "continente": "África",
+    "lingua": "Português",
+    "moeda": "Metical",
+    "coordenadasCapital": [-25.9653, 32.5892],
+    "resumo": "Moçambique articula poesia, narrativas de oralidade, marrabenta, cinema de memória histórica e artes atravessadas por múltiplas línguas nacionais.",
+    "literatura": [
+      {
+        "nome": "Mia Couto",
+        "descricao": "Escritor moçambicano conhecido por reinventar a língua literária em romances e contos.",
+        "link": "https://www.youtube.com/results?search_query=Mia+Couto"
+      },
+      {
+        "nome": "Paulina Chiziane",
+        "descricao": "Romancista com obras sobre mulheres, tradição e sociedade moçambicana.",
+        "link": "https://www.youtube.com/results?search_query=Paulina+Chiziane"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Marrabenta",
+        "descricao": "Gênero musical urbano associado a Maputo e à modernidade moçambicana.",
+        "link": "https://www.youtube.com/results?search_query=marrabenta+Mo%C3%A7ambique"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Licínio Azevedo",
+        "descricao": "Cineasta ligado ao cinema moçambicano contemporâneo e documental.",
+        "link": "https://www.imdb.com/name/nm0044211/"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Malangatana",
+        "descricao": "Pintor e poeta moçambicano de grande expressão internacional.",
+        "link": "https://www.youtube.com/results?search_query=Malangatana"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Notícias",
+        "link": "https://www.jornalnoticias.co.mz/"
+      },
+      {
+        "nome": "O País",
+        "link": "https://opais.co.mz/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "TVM",
+        "link": "https://www.tvm.co.mz/"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O português convive com línguas como changana, emakhuwa, sena e outras línguas moçambicanas.",
+      "A literatura moçambicana é conhecida por neologismos e imagens de oralidade."
+    ]
+  },
+  {
+    "id": "cabo-verde",
+    "nome": "Cabo Verde",
+    "bandeira": "🇨🇻",
+    "capital": "Praia",
+    "continente": "África",
+    "lingua": "Português",
+    "moeda": "Escudo cabo-verdiano",
+    "coordenadasCapital": [14.933, -23.5133],
+    "resumo": "Cabo Verde é um arquipélago de circulação atlântica, com morna, coladeira, literatura insular e forte presença do crioulo cabo-verdiano no cotidiano.",
+    "literatura": [
+      {
+        "nome": "Germano Almeida",
+        "descricao": "Escritor cabo-verdiano conhecido por narrativas irônicas e retratos sociais.",
+        "link": "https://www.youtube.com/results?search_query=Germano+Almeida"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Cesária Évora",
+        "descricao": "Cantora que tornou a morna conhecida em escala internacional.",
+        "link": "https://www.youtube.com/results?search_query=Ces%C3%A1ria+%C3%89vora"
+      },
+      {
+        "nome": "Mayra Andrade",
+        "descricao": "Artista contemporânea que mistura tradições cabo-verdianas e pop global.",
+        "link": "https://www.youtube.com/results?search_query=Mayra+Andrade"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Cinema cabo-verdiano",
+        "descricao": "Produção audiovisual em crescimento, muitas vezes ligada à diáspora e à memória insular.",
+        "link": "https://www.youtube.com/results?search_query=cinema+cabo-verdiano"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Manuel Figueira",
+        "descricao": "Artista visual importante para a modernidade estética cabo-verdiana.",
+        "link": "https://www.youtube.com/results?search_query=Manuel+Figueira+Cabo+Verde"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "A Semana",
+        "link": "https://www.asemana.publ.cv/"
+      },
+      {
+        "nome": "Expresso das Ilhas",
+        "link": "https://expressodasilhas.cv/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "RTC Cabo Verde",
+        "link": "https://rtc.cv/"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O crioulo cabo-verdiano é amplamente usado na vida cotidiana e varia entre ilhas.",
+      "A música popular frequentemente alterna português e crioulo."
+    ]
+  },
+  {
+    "id": "guine-bissau",
+    "nome": "Guiné-Bissau",
+    "bandeira": "🇬🇼",
+    "capital": "Bissau",
+    "continente": "África",
+    "lingua": "Português",
+    "moeda": "Franco CFA da África Ocidental",
+    "coordenadasCapital": [11.8636, -15.5977],
+    "resumo": "A Guiné-Bissau tem forte diversidade étnica e linguística, com crioulo guineense, música de intervenção, tradição oral e imprensa em desenvolvimento.",
+    "literatura": [
+      {
+        "nome": "Abdulai Silá",
+        "descricao": "Romancista guineense associado à literatura contemporânea do país.",
+        "link": "https://www.youtube.com/results?search_query=Abdulai+Sil%C3%A1"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "José Carlos Schwarz",
+        "descricao": "Músico e poeta ligado à canção política e à identidade guineense.",
+        "link": "https://www.youtube.com/results?search_query=Jos%C3%A9+Carlos+Schwarz"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Flora Gomes",
+        "descricao": "Cineasta guineense reconhecido por filmes sobre história, infância e sociedade.",
+        "link": "https://www.imdb.com/name/nm0326945/"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Arte bijagó",
+        "descricao": "Expressões visuais e rituais do arquipélago dos Bijagós.",
+        "link": "https://www.youtube.com/results?search_query=arte+bijag%C3%B3"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "O Democrata",
+        "link": "https://www.odemocratagb.com/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "TGB",
+        "link": "https://www.youtube.com/results?search_query=TGB+Guin%C3%A9-Bissau"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O crioulo guineense funciona como língua franca entre muitos grupos.",
+      "O português é língua oficial, mas convive com várias línguas nacionais."
+    ]
+  },
+  {
+    "id": "sao-tome-principe",
+    "nome": "São Tomé e Príncipe",
+    "bandeira": "🇸🇹",
+    "capital": "São Tomé",
+    "continente": "África",
+    "lingua": "Português",
+    "moeda": "Dobra",
+    "coordenadasCapital": [0.3365, 6.7273],
+    "resumo": "São Tomé e Príncipe articula cultura insular, roças históricas, música local, literatura pós-colonial e crioulos como forro, angolar e principense.",
+    "literatura": [
+      {
+        "nome": "Conceição Lima",
+        "descricao": "Poeta são-tomense reconhecida por abordar memória, ilha e história colonial.",
+        "link": "https://www.youtube.com/results?search_query=Concei%C3%A7%C3%A3o+Lima+poesia"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Juka",
+        "descricao": "Referência da música popular são-tomense.",
+        "link": "https://www.youtube.com/results?search_query=Juka+S%C3%A3o+Tom%C3%A9"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Cinema são-tomense",
+        "descricao": "Produção audiovisual emergente ligada a memória, ilha e juventude.",
+        "link": "https://www.youtube.com/results?search_query=cinema+s%C3%A3o-tomense"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Arte das roças",
+        "descricao": "Patrimônio arquitetônico e visual associado às antigas plantações de cacau.",
+        "link": "https://www.youtube.com/results?search_query=ro%C3%A7as+S%C3%A3o+Tom%C3%A9+Pr%C3%ADncipe"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Téla Nón",
+        "link": "https://www.telanon.info/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "TVS",
+        "link": "https://www.youtube.com/results?search_query=TVS+S%C3%A3o+Tom%C3%A9+e+Pr%C3%ADncipe"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "Além do português, há crioulos como forro, angolar e lung'ie.",
+      "Topônimos e vocabulários locais guardam marcas africanas e portuguesas."
+    ]
+  },
+  {
+    "id": "timor-leste",
+    "nome": "Timor-Leste",
+    "bandeira": "🇹🇱",
+    "capital": "Díli",
+    "continente": "Ásia",
+    "lingua": "Português e tétum",
+    "moeda": "Dólar dos Estados Unidos",
+    "coordenadasCapital": [-8.5569, 125.5603],
+    "resumo": "Timor-Leste cruza mundos austronésios, memória de resistência, oralidade, tétum e português em construção institucional e cultural contemporânea.",
+    "literatura": [
+      {
+        "nome": "Luís Cardoso",
+        "descricao": "Escritor timorense conhecido por romances sobre memória, diáspora e história.",
+        "link": "https://www.youtube.com/results?search_query=Lu%C3%ADs+Cardoso+Timor-Leste"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Ego Lemos",
+        "descricao": "Músico timorense ligado a canções de identidade, ambiente e reconstrução.",
+        "link": "https://www.youtube.com/results?search_query=Ego+Lemos"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Beatriz's War",
+        "descricao": "Longa-metragem timorense sobre conflito, memória e vida comunitária.",
+        "link": "https://www.imdb.com/title/tt2836240/"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Tais timorense",
+        "descricao": "Tecido tradicional com padrões simbólicos e identidade cultural.",
+        "link": "https://www.youtube.com/results?search_query=tais+timorense"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Tatoli",
+        "link": "https://tatoli.tl/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "RTTL",
+        "link": "https://www.youtube.com/results?search_query=RTTL+Timor-Leste"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "O tétum e o português são línguas oficiais do país.",
+      "O português em Timor-Leste convive com tétum e várias línguas locais."
+    ]
+  },
+  {
+    "id": "guine-equatorial",
+    "nome": "Guiné Equatorial",
+    "bandeira": "🇬🇶",
+    "capital": "Malabo",
+    "continente": "África",
+    "lingua": "Espanhol, francês e português",
+    "moeda": "Franco CFA da África Central",
+    "coordenadasCapital": [3.7523, 8.7741],
+    "resumo": "A Guiné Equatorial integra a CPLP e possui paisagem cultural multilíngue, com espanhol dominante, línguas nacionais e português como língua oficial.",
+    "literatura": [
+      {
+        "nome": "Donato Ndongo",
+        "descricao": "Escritor equato-guineense de referência na literatura hispano-africana.",
+        "link": "https://www.youtube.com/results?search_query=Donato+Ndongo"
+      }
+    ],
+    "musica": [
+      {
+        "nome": "Hijas del Sol",
+        "descricao": "Duo musical ligado à projeção internacional da música equato-guineense.",
+        "link": "https://www.youtube.com/results?search_query=Hijas+del+Sol+Guinea+Ecuatorial"
+      }
+    ],
+    "cinema": [
+      {
+        "nome": "Cinema da Guiné Equatorial",
+        "descricao": "Produção audiovisual pequena e multilíngue, frequentemente ligada à diáspora.",
+        "link": "https://www.youtube.com/results?search_query=cinema+Guin%C3%A9+Equatorial"
+      }
+    ],
+    "artes": [
+      {
+        "nome": "Escultura fang",
+        "descricao": "Tradição artística associada a povos fang da região centro-africana.",
+        "link": "https://www.youtube.com/results?search_query=arte+fang+Guin%C3%A9+Equatorial"
+      }
+    ],
+    "jornais": [
+      {
+        "nome": "Ahora EG",
+        "link": "https://ahoraeg.com/"
+      }
+    ],
+    "tv": [
+      {
+        "nome": "TVGE",
+        "link": "https://www.youtube.com/results?search_query=TVGE+Guinea+Ecuatorial"
+      }
+    ],
+    "curiosidadesLinguisticas": [
+      "É o único país africano com espanhol como uma das principais línguas oficiais.",
+      "O português tornou-se língua oficial no contexto de aproximação com a CPLP."
+    ]
+  }
+]
+  </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
